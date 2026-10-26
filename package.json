@@ -1,0 +1,37 @@
+{
+  "name": "medifind-ai",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -k \"npm:server:dev\" \"npm:client:dev\"",
+    "server:dev": "nodemon server/src/index.js",
+    "client:dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "start": "node server/src/index.js",
+    "seed": "node server/src/seed.js",
+    "test": "node --test server/test/*.test.js",
+    "check": "node --check server/src/index.js && node --check server/src/app.js && node --check server/src/routes/api.js && node --check server/src/models/index.js && node --check server/src/seed.js && node --check server/src/demoApi.js && node --check server/src/availabilityAssistant.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "leaflet": "^1.9.4",
+    "mongoose": "^8.9.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-leaflet": "^4.2.1",
+    "express-async-errors": "^3.1.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.2",
+    "nodemon": "^3.1.7",
+    "vite": "^6.0.7"
+  }
+}
+

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # MediFind AI
 
 A full-stack classroom demonstration that lets people search fictional medicine listings, inspect nearby pharmacy locations, and create pickup reservations. Pharmacy accounts can publish a profile, manage inventory, and confirm or decline reservations.
@@ -146,3 +147,7 @@ Replace the remote URL with your repository. Before pushing, verify `.env` files
 “Seed inventory and map points are fictional; pharmacy-entered listings are self-reported and should be called to confirm. Suggestions are informational, not a prescription or a guarantee of therapeutic equivalence. The next production step would be verified pharmacy onboarding and a reliable stock update process, with privacy and security review.”
 
 
+=======
+# Medifind-Project
+Ai Medicine Availability Finder. A project to help the people in emergency
+>>>>>>> 684f97c9791ac69ad2eb676adca62cc5b591f7cd

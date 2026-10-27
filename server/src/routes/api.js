@@ -12,11 +12,21 @@ const escapeRegex = value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 router.get('/health', (req, res) => res.json({ status: 'ok', database: req.app.locals.dbReady ? 'connected' : 'disconnected', demo: false }));
 router.post('/auth/register', async (req, res) => {
  const { name, email, password, role = 'user' } = req.body || {};
- if (!name?.trim() || !String(email || '').includes('@') || !String(email || '').split('@')[1]?.includes('.') || typeof password !== 'string' || password.length < 8 || !['user', 'pharmacy'].includes(role)) return res.status(400).json({ error: 'Enter a name, valid email, password (8+ characters), and valid account type.' });
- try { const user = await User.create({ name: name.trim(), email, passwordHash: await bcrypt.hash(password, 12), role }); const token = jwt.sign({ sub: user.id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '1d' }); res.status(201).json({ token, user: safeUser(user) }); }
+ const cleanName = typeof name === 'string' ? name.trim() : '';
+ const cleanEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+ if (!cleanName || !cleanEmail.includes('@') || !cleanEmail.split('@')[1]?.includes('.') || typeof password !== 'string' || password.length < 8 || !['user', 'pharmacy'].includes(role)) return res.status(400).json({ error: 'Enter a name, valid email, password (8+ characters), and valid account type.' });
+ try { const user = await User.create({ name: cleanName, email: cleanEmail, passwordHash: await bcrypt.hash(password, 12), role }); const token = jwt.sign({ sub: user.id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '1d' }); res.status(201).json({ token, user: safeUser(user) }); }
  catch (e) { if (e.code === 11000) return res.status(409).json({ error: 'An account with that email already exists.' }); throw e; }
 });
-router.post('/auth/login', async (req, res) => { const { email, password } = req.body || {}; const user = await User.findOne({ email: String(email || '').toLowerCase() }); if (!user || !(await bcrypt.compare(password || '', user.passwordHash))) return res.status(401).json({ error: 'Email or password is incorrect.' }); const token = jwt.sign({ sub: user.id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '1d' }); res.json({ token, user: safeUser(user) }); });
+router.post('/auth/login', async (req, res) => {
+ const { email, password } = req.body || {};
+ const cleanEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+ if (!cleanEmail || typeof password !== 'string') return res.status(400).json({ error: 'Email and password are required.' });
+ const user = await User.findOne({ email: cleanEmail });
+ if (!user || !(await bcrypt.compare(password, user.passwordHash))) return res.status(401).json({ error: 'Email or password is incorrect.' });
+ const token = jwt.sign({ sub: user.id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '1d' });
+ res.json({ token, user: safeUser(user) });
+});
 router.get('/auth/me', auth, (req, res) => res.json({ user: safeUser(req.user) }));
 router.get('/pharmacies', async (req, res) => { const q = {}; if (req.query.city) q.city = new RegExp(escapeRegex(String(req.query.city)), 'i'); res.json({ pharmacies: await Pharmacy.find(q).sort({ name: 1 }) }); });
 router.post('/pharmacies', auth, allow('pharmacy'), async (req, res) => { const { name, address, city, phone, lat, lng } = req.body || {}; if (!name || !address || !city || !Number.isFinite(Number(lat)) || !Number.isFinite(Number(lng))) return res.status(400).json({ error: 'Name, address, city, latitude and longitude are required.' }); const pharmacy = await Pharmacy.create({ name, address, city, phone, location: { lat: Number(lat), lng: Number(lng) }, isDemo: false, confirmedAt: new Date() }); req.user.pharmacy = pharmacy._id; await req.user.save(); res.status(201).json({ pharmacy }); });

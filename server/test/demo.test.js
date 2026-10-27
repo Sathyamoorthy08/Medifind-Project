@@ -18,3 +18,19 @@ test('offline demo supports login, search, reservation, pharmacy confirmation, a
  const inventory = await call('/inventory', { token: pharmacyLogin.token }); assert.equal(inventory.inventory.length, 21);
 }));
 
+test('demo auth normalizes registration and login emails and rejects invalid credentials', async () => withServer(async base => {
+ const register = await fetch(`${base}/api/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'Normalization User', email: ' Normalize@Example.test ', password: 'NormalizePass123!', role: 'user' }) });
+ assert.equal(register.status, 201);
+ const registered = await register.json();
+ assert.equal(registered.user.email, 'normalize@example.test');
+ assert.equal(typeof registered.token, 'string');
+ const login = await fetch(`${base}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: ' NORMALIZE@example.test ', password: 'NormalizePass123!' }) });
+ assert.equal(login.status, 200);
+ assert.equal((await login.json()).user.email, 'normalize@example.test');
+ const invalid = await fetch(`${base}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'normalize@example.test', password: 'wrong-password' }) });
+ assert.equal(invalid.status, 401);
+ assert.match((await invalid.json()).error, /incorrect/);
+ const malformed = await fetch(`${base}/api/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 17, email: 'bad@example.test', password: 'LongEnough123!' }) });
+ assert.equal(malformed.status, 400);
+}));
+

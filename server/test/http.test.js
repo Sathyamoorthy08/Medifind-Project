@@ -6,6 +6,11 @@ const app = require('../src/app');
 async function withServer(run) { const server = app.listen(0); await new Promise(resolve => server.once('listening', resolve)); try { await run(`http://127.0.0.1:${server.address().port}`); } finally { await new Promise(resolve => server.close(resolve)); } }
 test('REST health, 404, and auth guard respond over HTTP', async () => withServer(async base => {
  const health = await fetch(`${base}/api/health`); assert.equal(health.status, 200); assert.equal((await health.json()).status, 'ok');
+ const origin = 'https://medifind-ai.onrender.com';
+ const preflight = await fetch(`${base}/api/auth/login`, { method: 'OPTIONS', headers: { Origin: origin, 'Access-Control-Request-Method': 'POST', 'Access-Control-Request-Headers': 'content-type' } });
+ assert.equal(preflight.status, 204);
+ assert.equal(preflight.headers.get('access-control-allow-origin'), origin);
+ assert.match(preflight.headers.get('access-control-allow-methods') || '', /POST/);
  const missing = await fetch(`${base}/api/not-a-route`); assert.equal(missing.status, 404); assert.equal((await missing.json()).error, 'Route not found.');
  const protectedRoute = await fetch(`${base}/api/inventory`); assert.equal(protectedRoute.status, 401); assert.match((await protectedRoute.json()).error, /Sign in/);
 }));

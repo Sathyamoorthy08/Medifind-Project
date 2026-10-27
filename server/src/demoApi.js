@@ -23,16 +23,20 @@ const pharmacyOf = (store, item) => store.pharmacies.find(p => p._id === item.ph
 router.get('/health', (req, res) => res.json({ status: 'ok', database: 'demo-memory', demo: true, message: 'MongoDB unavailable; using fictional in-memory demo data. Changes reset when the API restarts.' }));
 router.post('/auth/register', async (req, res) => {
   const { name, email, password, role = 'user' } = req.body || {};
-  const cleanEmail = String(email || '').trim().toLowerCase();
-  if (!name?.trim() || !cleanEmail.includes('@') || !cleanEmail.split('@')[1]?.includes('.') || typeof password !== 'string' || password.length < 8 || !['user', 'pharmacy'].includes(role)) return res.status(400).json({ error: 'Enter a name, valid email, password (8+ characters), and valid account type.' });
+  const cleanName = typeof name === 'string' ? name.trim() : '';
+  const cleanEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+  if (!cleanName || !cleanEmail.includes('@') || !cleanEmail.split('@')[1]?.includes('.') || typeof password !== 'string' || password.length < 8 || !['user', 'pharmacy'].includes(role)) return res.status(400).json({ error: 'Enter a name, valid email, password (8+ characters), and valid account type.' });
   const store = storeFor(req);
   if ([...store.users.values()].some(u => u.email === cleanEmail)) return res.status(409).json({ error: 'An account with that email already exists.' });
-  const user = { _id: crypto.randomUUID(), name: name.trim(), email: cleanEmail, role, passwordHash: await bcrypt.hash(password, 10), pharmacy: null };
+  const user = { _id: crypto.randomUUID(), name: cleanName, email: cleanEmail, role, passwordHash: await bcrypt.hash(password, 10), pharmacy: null };
   store.users.set(cleanEmail, user); res.status(201).json({ token: tokenFor(user), user: safeUser(user) });
 });
 router.post('/auth/login', async (req, res) => {
-  const user = storeFor(req).users.get(String(req.body?.email || '').trim().toLowerCase());
-  if (!user || !(await bcrypt.compare(req.body?.password || '', user.passwordHash))) return res.status(401).json({ error: 'Email or password is incorrect.' });
+  const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+  const password = req.body?.password;
+  if (!email || typeof password !== 'string') return res.status(400).json({ error: 'Email and password are required.' });
+  const user = storeFor(req).users.get(email);
+  if (!user || !(await bcrypt.compare(password, user.passwordHash))) return res.status(401).json({ error: 'Email or password is incorrect.' });
   res.json({ token: tokenFor(user), user: safeUser(user) });
 });
 router.get('/auth/me', protect, (req, res) => res.json({ user: safeUser(req.user) }));

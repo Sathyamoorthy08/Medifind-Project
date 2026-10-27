@@ -6,10 +6,40 @@ import 'leaflet/dist/leaflet.css';
 import './style.css';
 
 const icon = L.divIcon({ className: 'pin', html: '<span>✚</span>', iconSize: [32, 32], iconAnchor: [16, 30] });
+const API_BASE = 'https://medifind-api-t54n.onrender.com';
 const request = async (path, { token, ...options } = {}) => {
-  const response = await fetch('/api' + path, { ...options, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...options?.headers } });
-  const data = await response.json();
-  if (!response.ok) { const error = Error(data.error || 'Request failed'); error.status = response.status; throw error; }
+const response = await fetch(
+  `${API_BASE}/api${path}`,
+  {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  }
+);
+  const body = await response.text();
+  let data = null;
+
+  if (body.trim()) {
+    try {
+      data = JSON.parse(body);
+    } catch {
+      const message = response.ok
+        ? 'The server returned an unreadable response. Please try again.'
+        : `Request failed (${response.status} ${response.statusText || 'HTTP error'}); the server did not return a readable error.`;
+      const error = Error(message);
+      error.status = response.status;
+      throw error;
+    }
+  }
+
+  if (!response.ok) {
+    const error = Error(data?.error || `Request failed (${response.status} ${response.statusText || 'HTTP error'}).`);
+    error.status = response.status;
+    throw error;
+  }
+
   return data;
 };
 const money = value => `₹${Number(value || 0).toFixed(2)}`;

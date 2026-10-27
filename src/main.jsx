@@ -6,18 +6,20 @@ import 'leaflet/dist/leaflet.css';
 import './style.css';
 
 const icon = L.divIcon({ className: 'pin', html: '<span>✚</span>', iconSize: [32, 32], iconAnchor: [16, 30] });
-const API_BASE = 'https://medifind-api-t54n.onrender.com';
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? '' : 'https://medifind-api-t54n.onrender.com')).replace(/\/+$/, '');
 const request = async (path, { token, ...options } = {}) => {
 const response = await fetch(
   `${API_BASE}/api${path}`,
   {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      ...(options.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers
     }
   }
 );
+  if (response.status === 204) return null;
   const body = await response.text();
   let data = null;
 
@@ -36,6 +38,12 @@ const response = await fetch(
 
   if (!response.ok) {
     const error = Error(data?.error || `Request failed (${response.status} ${response.statusText || 'HTTP error'}).`);
+    error.status = response.status;
+    throw error;
+  }
+
+  if (!body.trim()) {
+    const error = Error(`The server returned an empty response (HTTP ${response.status}).`);
     error.status = response.status;
     throw error;
   }
@@ -82,15 +90,20 @@ function App() {
     try {
       if (user.role === 'user') { const data = await request('/reservations/mine', { token }); setReservations(data.reservations); }
       else { const [items, incoming] = await Promise.all([request('/inventory', { token }), request('/reservations/pharmacy', { token })]); setInventory(items.inventory); setReservations(incoming.reservations); }
-    } catch (err) { if (err.status === 401) { localStorage.removeItem('mf-session'); setSession(null); setReservations([]); setInventory([]); setError('Your demo session expired when the in-memory backend restarted. Please log in again.'); } else setError(err.message); }
+    } catch (err) { if (err.status === 401) { localStorage.removeItem('mf-session'); setSession(null); setReservations([]); setInventory([]); setError('Your session is invalid or expired. Please log in again.'); } else setError(err.message); }
   }
   useEffect(() => { searchFor('Paracetamol', 'Chennai', ''); }, []);
   useEffect(() => { request('/pharmacies').then(data => setPharmacies(data.pharmacies)).catch(err => setError(err.message)); }, []);
   useEffect(() => { loadDash(); }, [token]);
   async function submitAuth(event) {
     event.preventDefault(); const form = new FormData(event.currentTarget); setError('');
-    try { const data = await request(modal === 'register' ? '/auth/register' : '/auth/login', { method: 'POST', body: JSON.stringify(Object.fromEntries(form)) }); saveSession(data); setModal(''); setNotice(`Welcome, ${data.user.name.split(' ')[0]}.`); }
-    catch (err) { setError(err.message); }
+    setSaving(true);
+    try {
+      const data = await request(modal === 'register' ? '/auth/register' : '/auth/login', { method: 'POST', body: JSON.stringify(Object.fromEntries(form)) });
+      if (typeof data?.token !== 'string' || typeof data?.user?.name !== 'string') throw Error('The server returned an invalid login response. Please try again.');
+      saveSession(data); setModal(''); setNotice(`Welcome, ${data.user.name.split(' ')[0]}.`);
+    } catch (err) { setError(err.message); }
+    finally { setSaving(false); }
   }
   function reserve(item) {
     if (!user) { setModal('login'); return; }

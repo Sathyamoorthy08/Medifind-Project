@@ -23,8 +23,8 @@ test('demo catalog has 21 fictional medicines and category search finds them', a
 }));
 test('reservation lifecycle reserves exact quantity, accepts without second deduction, rejects/cancels once, and enforces ownership', async () => withApi(async base => {
   const call = async (endpoint, { method = 'GET', token, body } = {}) => { const response = await fetch(`${base}/api${endpoint}`, { method, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) }); return { response, data: await response.json() }; };
-  const user = (await call('/auth/login', { method: 'POST', body: { email: 'user@demo.medifind.test', password: 'DemoPass123!' } })).data;
-  const pharmacy = (await call('/auth/login', { method: 'POST', body: { email: 'pharmacy@demo.medifind.test', password: 'DemoPass123!' } })).data;
+  const user = (await call('/auth/login', { method: 'POST', body: { email: 'demo.user@medifind.test', password: 'MediFindUser@2026' } })).data;
+  const pharmacy = (await call('/auth/login', { method: 'POST', body: { email: 'demo.pharmacy@medifind.test', password: 'MediFindPharmacy@2026' } })).data;
   const second = (await call('/auth/register', { method: 'POST', body: { name: 'Second User', email: 'second@example.test', password: 'AnotherPass123!', role: 'user' } })).data;
   const search = async () => (await call('/medicines/search?q=Paracetamol')).data.results;
   const first = (await search()).find(x => x.pharmacy.name === 'GreenCross Pharmacy'); const original = first.quantity;
@@ -57,7 +57,7 @@ test('reservation dialog waits for explicit confirmation and cancel makes no res
   assert.equal(source.slice(confirmStart, cancelStart).includes("request('/reservations'"), true);
 });
 test('simultaneous demo reservations cannot overbook the last available stock', async () => withApi(async base => {
-  const loginResponse = await fetch(`${base}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'user@demo.medifind.test', password: 'DemoPass123!' }) });
+  const loginResponse = await fetch(`${base}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'demo.user@medifind.test', password: 'MediFindUser@2026' }) });
   const user = await loginResponse.json();
   const searchResponse = await fetch(`${base}/api/medicines/search?q=Paracetamol`); const results = (await searchResponse.json()).results;
   const item = results.find(x => x.pharmacy.name === 'GreenCross Pharmacy'); const lastUnits = item.quantity;

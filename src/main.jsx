@@ -8,7 +8,8 @@ import './style.css';
 const icon = L.divIcon({ className: 'pin', html: '<span>✚</span>', iconSize: [32, 32], iconAnchor: [16, 30] });
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? '' : 'https://medifind-api-t54n.onrender.com')).replace(/\/+$/, '');
 const request = async (path, { token, ...options } = {}) => {
-const response = await fetch(
+let response;
+try { response = await fetch(
   `${API_BASE}/api${path}`,
   {
     ...options,
@@ -18,7 +19,7 @@ const response = await fetch(
       ...options.headers
     }
   }
-);
+); } catch (cause) { const error = Error('Cannot reach the MediFind API. Check your connection and the deployed API URL, then try again.'); error.cause = cause; throw error; }
   if (response.status === 204) return null;
   const body = await response.text();
   let data = null;
@@ -61,6 +62,7 @@ function App() {
   const [loading, setLoading] = useState(false); const [saving, setSaving] = useState(false); const [error, setError] = useState(''); const [notice, setNotice] = useState('');
   const [assistant, setAssistant] = useState(null); const [reserveItem, setReserveItem] = useState(null); const [reserveQuantity, setReserveQuantity] = useState(1);
   const [modal, setModal] = useState(''); const [tab, setTab] = useState('find');
+  const [demoCredentials, setDemoCredentials] = useState({ email: '', password: '' });
   const saveSession = value => { setSession(value); localStorage.setItem('mf-session', JSON.stringify(value)); };
   const token = session?.token; const user = session?.user;
 
@@ -101,7 +103,7 @@ function App() {
     try {
       const data = await request(modal === 'register' ? '/auth/register' : '/auth/login', { method: 'POST', body: JSON.stringify(Object.fromEntries(form)) });
       if (typeof data?.token !== 'string' || typeof data?.user?.name !== 'string') throw Error('The server returned an invalid login response. Please try again.');
-      saveSession(data); setModal(''); setNotice(`Welcome, ${data.user.name.split(' ')[0]}.`);
+      saveSession(data); setModal(''); setTab('dashboard'); setNotice(`Welcome, ${data.user.name.split(' ')[0]}.`);
     } catch (err) { setError(err.message); }
     finally { setSaving(false); }
   }
@@ -175,7 +177,7 @@ function App() {
     </main>
     <footer><a className="brand" href="#"><span className="brandmark">✚</span> medifind<span className="ai">AI</span></a><span>Classroom project · fictional demo inventory only · not medical advice</span><span>© 2026 MediFind AI</span></footer>
     {modal && <div className="modal-bg" onClick={event => event.target === event.currentTarget && setModal('')}><div className="modal"><button className="close" onClick={() => { setModal(''); setError(''); }}>×</button>
-      {(modal === 'login' || modal === 'register') ? <><span className="eyebrow">{modal === 'login' ? 'WELCOME BACK' : 'GET STARTED'}</span><h2>{modal === 'login' ? 'Log in to MediFind' : 'Create your account'}</h2><form onSubmit={submitAuth} className="modal-form">{modal === 'register' && <label>Full name<input name="name" required minLength="2"/></label>}<label>Email address<input type="email" name="email" required autoComplete="email"/></label><label>Password<input type="password" name="password" minLength="8" required autoComplete={modal === 'login' ? 'current-password' : 'new-password'}/></label>{modal === 'register' && <label>Account type<select name="role"><option value="user">Medicine seeker</option><option value="pharmacy">Pharmacy manager</option></select></label>}{error && <div className="alert">{error}</div>}<button className="primary" disabled={saving}>{modal === 'login' ? 'Log in →' : 'Create account →'}</button></form><p className="switch-auth">{modal === 'login' ? <>New here? <button onClick={() => { setError(''); setModal('register'); }}>Create an account</button></> : <>Already registered? <button onClick={() => { setError(''); setModal('login'); }}>Log in</button></>}</p></> : null}
+      {(modal === 'login' || modal === 'register') ? <><span className="eyebrow">{modal === 'login' ? 'WELCOME BACK' : 'GET STARTED'}</span><h2>{modal === 'login' ? 'Log in to MediFind' : 'Create your account'}</h2><form onSubmit={submitAuth} className="modal-form">{modal === 'register' && <label>Full name<input name="name" required minLength="2"/></label>}<label>Email address<input type="email" name="email" value={modal === 'login' ? demoCredentials.email : undefined} onChange={modal === 'login' ? event => setDemoCredentials({ ...demoCredentials, email: event.target.value }) : undefined} required autoComplete="email"/></label><label>Password<input type="password" name="password" value={modal === 'login' ? demoCredentials.password : undefined} onChange={modal === 'login' ? event => setDemoCredentials({ ...demoCredentials, password: event.target.value }) : undefined} minLength="8" required autoComplete={modal === 'login' ? 'current-password' : 'new-password'}/></label>{modal === 'register' && <label>Account type<select name="role"><option value="user">Medicine seeker</option><option value="pharmacy">Pharmacy manager</option></select></label>}{modal === 'login' && <div className="demo-login-buttons"><button type="button" className="outline" disabled={saving} onClick={() => { setDemoCredentials({ email: 'demo.user@medifind.test', password: 'MediFindUser@2026' }); setError(''); }}>Fill demo user</button><button type="button" className="outline" disabled={saving} onClick={() => { setDemoCredentials({ email: 'demo.pharmacy@medifind.test', password: 'MediFindPharmacy@2026' }); setError(''); }}>Fill demo pharmacy</button></div>}{error && <div className="alert" role="alert">{error}</div>}<button className="primary" disabled={saving}>{saving ? 'Signing in…' : modal === 'login' ? 'Log in →' : 'Create account →'}</button></form><p className="switch-auth">{modal === 'login' ? <>New here? <button onClick={() => { setError(''); setModal('register'); }}>Create an account</button></> : <>Already registered? <button onClick={() => { setError(''); setModal('login'); }}>Log in</button></>}</p></> : null}
       {modal === 'reserve' && reserveItem && <><span className="eyebrow">PICKUP RESERVATION</span><h2>Review your request</h2><div className="booking-details"><b>{reserveItem.medicine}</b><span>{reserveItem.genericName} · {reserveItem.strength} · {reserveItem.form}</span><span>{reserveItem.pharmacy.name} · {reserveItem.pharmacy.city}</span><span>Unit price <strong>{money(reserveItem.price)}</strong></span><span>Available now <strong>{reserveItem.quantity}</strong></span></div><form className="modal-form" onSubmit={confirmReservation}><label>Quantity<input type="number" min="1" max={reserveItem.quantity} step="1" value={reserveQuantity} onChange={event => setReserveQuantity(event.target.value)} required/></label><div className="booking-total"><span>Total</span><strong>{money(Number(reserveItem.price) * Number(reserveQuantity || 0))}</strong></div><p className="cancel-policy">Confirming creates a PENDING request and reserves this quantity. The pharmacy will confirm or reject it.</p>{error && <div className="alert">{error}</div>}<div className="modal-actions"><button type="button" className="outline" onClick={() => { setModal(''); setReserveItem(null); setError(''); }}>Cancel</button><button type="submit" className="primary" disabled={saving}>{saving ? 'Submitting…' : 'Confirm reservation →'}</button></div></form></>}
       {modal === 'add' && <><span className="eyebrow">YOUR CATALOG</span><h2>Add inventory item</h2><form className="modal-form" onSubmit={addItem}><label>Medicine name<input name="medicine" required/></label><label>Generic name<input name="genericName"/></label><label>Active ingredient<input name="activeIngredient"/></label><label>Category<input name="category" placeholder="e.g. Allergy relief" required/></label><div className="two"><label>Strength<input name="strength" placeholder="500 mg"/></label><label>Form<input name="form" placeholder="Tablet"/></label></div><div className="two"><label>Price (₹)<input type="number" min="0" step="0.01" name="price" required/></label><label>Quantity<input type="number" min="0" step="1" name="quantity" required/></label></div>{error && <div className="alert">{error}</div>}<button className="primary">Save inventory →</button></form></>}
     </div></div>}

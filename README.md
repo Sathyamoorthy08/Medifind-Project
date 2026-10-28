@@ -59,14 +59,16 @@ Open the URL printed by Vite (normally <http://localhost:5173>; Vite selects 517
 
 ## Demo accounts
 
-Seeded by `npm.cmd run seed` (both use the same password):
+Seeded by `npm.cmd run seed`:
 
 | Role | Email | Password |
 | --- | --- | --- |
-| Medicine seeker | `user@demo.medifind.test` | `DemoPass123!` |
-| Pharmacy manager | `pharmacy@demo.medifind.test` | `DemoPass123!` |
+| Medicine seeker (`user`) | `demo.user@medifind.test` | `MediFindUser@2026` |
+| Pharmacy manager (`pharmacy`; UI equivalent of `pharmacy_owner`) | `demo.pharmacy@medifind.test` | `MediFindPharmacy@2026` |
 
-These are demo-only credentials. Do not reuse them for real services. Reseeding deletes/replaces only the seeded demo accounts, demo pharmacies, and demo inventory. Do not use the demo credentials on a public deployment.
+These are demo-only credentials. Do not reuse them for real services. `npm.cmd run seed` is repeatable: it upserts the fictional catalog and resets only these two exact demo accounts' passwords and fields. It does not delete users or existing pharmacy/inventory records. The pharmacy demo account is associated with the first fictional catalog pharmacy.
+
+For Render, set `MONGODB_URI` to the production database URL, `JWT_SECRET` to a unique value of at least 32 characters, and `CLIENT_ORIGIN` to the exact deployed frontend origin (for example `https://medifind-ai.onrender.com`). Set the frontend build variable `VITE_API_BASE_URL` to the deployed API origin (`https://medifind-api-t54n.onrender.com` in the current build default). `PORT` is supplied by Render. To initialize the actual Render database, open the backend service's **Shell** and run `npm run seed`; the seed script reads that service's configured `MONGODB_URI`. This must be run once after deployment (and again only when you want to reset the two demo passwords). No database admin endpoint is exposed. Do not run this against a production database unless the demo accounts are intended to be available there.
 
 ## REST API
 

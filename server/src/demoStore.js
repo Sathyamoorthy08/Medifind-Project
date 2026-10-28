@@ -11,11 +11,9 @@ async function createDemoStore() {
       item.id = item._id; store.inventory.push(item);
     }
   }
-<<<<<<< HEAD
-  for (const data of demoAccounts) { const passwordHash = await bcrypt.hash(data.password, 10); const user = { name: data.name, email: data.email, role: data.role, ...(data.role === 'pharmacy' ? { pharmacy: store.pharmacies[0]._id } : {}), _id: crypto.randomUUID(), id: null, passwordHash, createdAt: new Date().toISOString() }; user.id = user._id; store.users.set(user.email, user); }
-=======
- for (const data of demoAccounts) { const passwordHash = await bcrypt.hash(data.password, 10); const user = { name: data.name, email: data.email, role: data.role, ...(data.role === 'pharmacy' ? { pharmacy: store.pharmacies[0]._id } : {}), _id: crypto.randomUUID(), id: null, passwordHash, createdAt: new Date().toISOString() }; user.id = user._id; store.users.set(user.email, user); }
->>>>>>> 1e58c43a7c60a558e0f722f4b03f8efbd9c16941
+
+  const passwordHash = await bcrypt.hash('DemoPass123!', 10);
+  for (const data of [{ name: 'Demo Explorer', email: 'user@demo.medifind.test', role: 'user' }, { name: 'Demo Pharmacy', email: 'pharmacy@demo.medifind.test', role: 'pharmacy', pharmacy: store.pharmacies[0]._id }]) { const user = { ...data, _id: crypto.randomUUID(), id: null, passwordHash, createdAt: new Date().toISOString() }; user.id = user._id; store.users.set(user.email, user); }
   return store;
 }
 module.exports = { createDemoStore };

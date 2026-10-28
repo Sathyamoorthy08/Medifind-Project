@@ -1,10 +1,7 @@
 require('dotenv').config({ path: process.env.ENV_FILE || 'server/.env' });
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-<<<<<<< HEAD
 const { User, Pharmacy, Inventory } = require('./models');
-=======
->>>>>>> 1e58c43a7c60a558e0f722f4b03f8efbd9c16941
 const demoAccounts = [
   { name: 'Demo Explorer', email: 'demo.user@medifind.test', password: 'MediFindUser@2026', role: 'user' },
   { name: 'Demo Pharmacy', email: 'demo.pharmacy@medifind.test', password: 'MediFindPharmacy@2026', role: 'pharmacy' }
@@ -41,13 +38,12 @@ const medicines = [
   { medicine: 'Sterile Saline Eye Drops', genericName: 'Sterile sodium chloride', activeIngredient: 'sterile sodium chloride', category: 'Eye care', strength: '10 ml', form: 'Eye drops', price: 58, quantity: 7 }
 ];
 async function seed() {
-<<<<<<< HEAD
   if (!process.env.MONGODB_URI) throw new Error('MONGODB_URI is required. Set it in Render Shell or your local environment before seeding.');
   await mongoose.connect(process.env.MONGODB_URI);
-=======
+
  if (!process.env.MONGODB_URI) throw new Error('MONGODB_URI is required. Set it in Render Shell or your local environment before seeding.');
   await Promise.all([User.deleteMany({ email: /@demo\.medifind\.test$/ }), Pharmacy.deleteMany({ isDemo: true }), Inventory.deleteMany({ isDemo: true })]);
->>>>>>> 1e58c43a7c60a558e0f722f4b03f8efbd9c16941
+
   try {
     const created = [];
     for (const data of pharmacies) {

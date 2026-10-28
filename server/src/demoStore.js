@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
-const { pharmacies, medicines } = require('./seed');
+const { pharmacies, medicines, demoAccounts } = require('./seed');
 async function createDemoStore() {
   const store = { users: new Map(), pharmacies: [], inventory: [], reservations: [] };
   for (let index = 0; index < pharmacies.length; index++) {
@@ -11,8 +11,7 @@ async function createDemoStore() {
       item.id = item._id; store.inventory.push(item);
     }
   }
-  const passwordHash = await bcrypt.hash('DemoPass123!', 10);
-  for (const data of [{ name: 'Demo Explorer', email: 'user@demo.medifind.test', role: 'user' }, { name: 'Demo Pharmacy', email: 'pharmacy@demo.medifind.test', role: 'pharmacy', pharmacy: store.pharmacies[0]._id }]) { const user = { ...data, _id: crypto.randomUUID(), id: null, passwordHash, createdAt: new Date().toISOString() }; user.id = user._id; store.users.set(user.email, user); }
+ for (const data of demoAccounts) { const passwordHash = await bcrypt.hash(data.password, 10); const user = { name: data.name, email: data.email, role: data.role, ...(data.role === 'pharmacy' ? { pharmacy: store.pharmacies[0]._id } : {}), _id: crypto.randomUUID(), id: null, passwordHash, createdAt: new Date().toISOString() }; user.id = user._id; store.users.set(user.email, user); }
   return store;
 }
 module.exports = { createDemoStore };

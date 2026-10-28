@@ -1,7 +1,10 @@
 require('dotenv').config({ path: process.env.ENV_FILE || 'server/.env' });
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const { User, Pharmacy, Inventory } = require('./models');
+const demoAccounts = [
+  { name: 'Demo Explorer', email: 'demo.user@medifind.test', password: 'MediFindUser@2026', role: 'user' },
+  { name: 'Demo Pharmacy', email: 'demo.pharmacy@medifind.test', password: 'MediFindPharmacy@2026', role: 'pharmacy' }
+];
 const pharmacies = [
   { name: 'GreenCross Pharmacy', address: '12 College Road, Anna Nagar', city: 'Chennai', phone: '+91 44 4000 1001', location: { lat: 13.085, lng: 80.21 } },
   { name: 'WellSpring Medico', address: '8 Lake View Street, T. Nagar', city: 'Chennai', phone: '+91 44 4000 1002', location: { lat: 13.0418, lng: 80.2341 } },
@@ -34,15 +37,27 @@ const medicines = [
   { medicine: 'Sterile Saline Eye Drops', genericName: 'Sterile sodium chloride', activeIngredient: 'sterile sodium chloride', category: 'Eye care', strength: '10 ml', form: 'Eye drops', price: 58, quantity: 7 }
 ];
 async function seed() {
-  await mongoose.connect(process.env.MONGODB_URI);
+ if (!process.env.MONGODB_URI) throw new Error('MONGODB_URI is required. Set it in Render Shell or your local environment before seeding.');
   await Promise.all([User.deleteMany({ email: /@demo\.medifind\.test$/ }), Pharmacy.deleteMany({ isDemo: true }), Inventory.deleteMany({ isDemo: true })]);
-  const created = await Pharmacy.insertMany(pharmacies.map(p => ({ ...p, isDemo: true })));
-  for (let n = 0; n < created.length; n++) await Inventory.insertMany(medicines.map((m, i) => ({ pharmacy: created[n]._id, ...m, price: m.price + (i % 3) * 4, quantity: Math.max(0, m.quantity - (n % 3) * 2), isDemo: true })));
-  const passwordHash = await bcrypt.hash('DemoPass123!', 12);
-  await User.create([{ name: 'Demo Explorer', email: 'user@demo.medifind.test', passwordHash, role: 'user' }, { name: 'Demo Pharmacy', email: 'pharmacy@demo.medifind.test', passwordHash, role: 'pharmacy', pharmacy: created[0]._id }]);
-  console.log(`Seeded ${created.length} fictional pharmacies, ${created.length * medicines.length} demo inventory rows and two demo accounts.`);
-  await mongoose.disconnect();
+  try {
+    const created = [];
+    for (const data of pharmacies) {
+      const pharmacy = await Pharmacy.findOneAndUpdate({ name: data.name, address: data.address, isDemo: true }, { $setOnInsert: { ...data, isDemo: true } }, { new: true, upsert: true, runValidators: true });
+      created.push(pharmacy);
+    }
+    for (let n = 0; n < created.length; n++) for (let i = 0; i < medicines.length; i++) {
+      const m = medicines[i];
+      await Inventory.findOneAndUpdate({ pharmacy: created[n]._id, medicine: m.medicine, isDemo: true }, { $setOnInsert: { pharmacy: created[n]._id, ...m, price: m.price + (i % 3) * 4, quantity: Math.max(0, m.quantity - (n % 3) * 2), isDemo: true } }, { upsert: true, runValidators: true });
+    }
+    for (const account of demoAccounts) {
+      const existing = await User.findOne({ email: account.email });
+      if (existing && !existing.isDemo) throw new Error(`Refusing to change non-demo account ${account.email}.`);
+      const passwordHash = await bcrypt.hash(account.password, 12);
+      await User.findOneAndUpdate({ email: account.email }, { $set: { name: account.name, passwordHash, role: account.role, isDemo: true, ...(account.role === 'pharmacy' ? { pharmacy: created[0]._id } : {}) } }, { upsert: true, new: true, runValidators: true, setDefaultsOnInsert: true });
+    }
+    console.log(`Demo seed complete: ${created.length} catalog pharmacies, ${created.length * medicines.length} catalog inventory rows, and two demo accounts are ready.`);
+  } finally { await mongoose.disconnect(); }
 }
 if (require.main === module) seed().catch(e => { console.error(e); process.exit(1); });
-module.exports = { pharmacies, medicines, seed };
+module.exports = { pharmacies, medicines, demoAccounts, seed };
 
